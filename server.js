@@ -73,6 +73,11 @@ app.put('/users/:id', (req, res) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.send("Backend API Web Portofolio berjalan 🚀");
+});
+
+
 app.listen(5000, () => {
   console.log('Server berjalan di http://localhost:5000');
 });
