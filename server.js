@@ -8,18 +8,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
-const db = mysql.createConnection({
+// Gunakan connection pool untuk kestabilan
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-db.connect((err) => {
-  if (err) throw err;
-  console.log('Connected to database.');
+// Cek koneksi saat start
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error('❌ Gagal konek ke database:', err.message);
+  } else {
+    console.log('✅ Berhasil konek ke database');
+    connection.release();
+  }
 });
 
 // Route GET data
@@ -42,30 +50,26 @@ app.post('/users', (req, res) => {
   });
 });
 
-// delete
+// DELETE data
 app.delete('/users/:id', (req, res) => {
   const { id } = req.params;
-
   const sql = 'DELETE FROM users WHERE id = ?';
+
   db.query(sql, [id], (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
-
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'User tidak ditemukan' });
     }
-
     res.json({ message: 'User berhasil dihapus' });
   });
 });
 
-// edit
-
+// UPDATE data
 app.put('/users/:id', (req, res) => {
   const { id } = req.params;
   const { nama, email, alamat, nim, prodi, komentar } = req.body;
   const sql = `
-    UPDATE users SET nama=?, email=?, alamat=?, nim=?, prodi=?, komentar=?
-    WHERE id=?`;
+    UPDATE users SET nama=?, email=?, alamat=?, nim=?, prodi=?, komentar=? WHERE id=?`;
 
   db.query(sql, [nama, email, alamat, nim, prodi, komentar, id], (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -73,11 +77,12 @@ app.put('/users/:id', (req, res) => {
   });
 });
 
+// Root route
 app.get("/", (req, res) => {
   res.send("Backend API Web Portofolio berjalan 🚀");
 });
 
-
+// Jalankan server
 app.listen(5000, () => {
   console.log('Server berjalan di http://localhost:5000');
 });
